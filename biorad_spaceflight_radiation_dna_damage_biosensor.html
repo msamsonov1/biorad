@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioRad: Spaceflight Radiation DNA Damage Biosensor</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- MathJax v3 Bulletproof Configuration -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Custom Styles for Dark Space Theme and Formula Formatting -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #030712;
+      color: #f3f4f6;
+    }
+
+    .font-mono-data {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .formula-box {
+      background-color: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 0.5rem;
+      padding: 0.85rem;
+      color: #38bdf8;
+      font-size: 0.875rem;
+      overflow-x: auto;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#030712] text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- TOP HUD BAR / HEADER -->
+  <header class="border-b border-gray-800 bg-[#080d1a]/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 rounded-lg bg-cyan-950/60 border border-cyan-500/40 text-cyan-400">
+          <i data-lucide="dna" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-lg tracking-wider text-white">BioRad</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">NASA SBIR T4.02</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 hidden sm:inline-block">Mars Transit Class</span>
+          </div>
+          <p class="text-xs text-gray-400">Real-Time Synthetic DNA Array GCR Telemetry & Molecular Damage Observer</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 sm:space-x-2 bg-gray-950/80 p-1.5 rounded-xl border border-gray-800">
+        <button id="tabBtnSim" onclick="switchTab('sim')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-white bg-cyan-600/30 border border-cyan-500/50 shadow-sm flex items-center space-x-1.5">
+          <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+          <span>Live HUD</span>
+        </button>
+        <button id="tabBtnPhysics" onclick="switchTab('physics')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5">
+          <i data-lucide="atom" class="w-4 h-4 text-purple-400"></i>
+          <span>Physics & Model</span>
+        </button>
+        <button id="tabBtnProposal" onclick="switchTab('proposal')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5">
+          <i data-lucide="file-text" class="w-4 h-4 text-amber-400"></i>
+          <span>$225k Proposal</span>
+        </button>
+        <button id="tabBtnARR" onclick="switchTab('arr')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5">
+          <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-400"></i>
+          <span>Commercial ARR</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: LIVE SIMULATION & TELEMETRY HUD                                    -->
+    <!-- ========================================================================= -->
+    <div id="viewSim" class="space-y-6">
+      
+      <!-- Top Alert Banner (Dynamic) -->
+      <div id="stormShelterBanner" class="hidden p-4 rounded-xl border border-rose-500/60 bg-rose-950/40 text-rose-200 flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse shadow-lg shadow-rose-950/50">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 rounded-lg bg-rose-900/60 border border-rose-500">
+            <i data-lucide="shield-alert" class="w-6 h-6 text-rose-300"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-rose-100 flex items-center gap-2">
+              CRITICAL GCR DETECTED: HEAVY ION DOUBLE-STRAND BREAK CASCADE
+            </h3>
+            <p class="text-xs text-rose-300/90">Conductance Loss $\Delta G > 58\%$ | Lethal $^{56}\text{Fe}$ Flux Threshold Breached. Real-time Crew Storm Shelter Protocol Active.</p>
+          </div>
+        </div>
+        <button onclick="emergencyStormShelterSeal()" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs tracking-wider uppercase transition border border-rose-400 shadow-md">
+          Seal Water Shielding Bay
+        </button>
+      </div>
+
+      <!-- Biosensor Grid & Phase-Space Telemetry -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 7 Cols: Micro-Array Nanoscale Simulation Canvas -->
+        <div class="lg:col-span-7 bg-gray-900/50 rounded-2xl border border-gray-800/80 p-4 flex flex-col justify-between backdrop-blur shadow-xl relative overflow-hidden">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <h2 class="text-sm font-semibold text-gray-200 tracking-wide uppercase flex items-center gap-2">
+                Nanofabricated DNA $\pi$-Stack Micro-Current Chamber
+              </h2>
+            </div>
+            <div class="flex items-center space-x-2 text-xs font-mono-data">
+              <span class="text-gray-400">Array Bias:</span>
+              <span class="text-cyan-400 font-bold">120 mV DC</span>
+              <span class="text-gray-500">|</span>
+              <span class="text-gray-400">Integrity:</span>
+              <span id="statIntegrity" class="text-emerald-400 font-bold">98.4%</span>
+            </div>
+          </div>
+
+          <!-- The Bio-Chip Physical Canvas -->
+          <div class="relative w-full h-[320px] rounded-xl overflow-hidden bg-[#02050e] border border-gray-800">
+            <canvas id="bioChipCanvas" class="w-full h-full block"></canvas>
+            
+            <!-- Floating Canvas Legend / Sensor Overlay -->
+            <div class="absolute bottom-2 left-2 pointer-events-none bg-gray-950/80 border border-gray-800 rounded-lg p-2 text-[10px] text-gray-300 space-y-1 font-mono-data">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span>
+                <span>Normal $\pi$-Stack Transport (Oligomer Array)</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                <span>Ionization Track ($^{56}\text{Fe}$ / GCR Cleavage)</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                <span>Proton Deflection ($^1\text{H}^+$ Solar Wind)</span>
+              </div>
+            </div>
+
+            <!-- Real-time Active Sensor HUD Badges -->
+            <div class="absolute top-2 right-2 bg-gray-950/80 border border-gray-800 rounded-lg p-2.5 text-right font-mono-data text-xs space-y-1">
+              <div class="text-gray-400 text-[10px]">CURRENT CONDUCTANCE ($G$)</div>
+              <div id="hudConductance" class="text-cyan-400 font-bold text-base">4.82 nS</div>
+              <div class="text-[10px] text-gray-400 pt-1">EVENT DETECTED</div>
+              <div id="hudLastHitType" class="text-emerald-400 font-semibold text-[11px]">Nominal Cosmic Background</div>
+            </div>
+          </div>
+
+          <!-- Live Particle Hit Logs & Status Indicators -->
+          <div class="grid grid-cols-3 gap-3 mt-4 text-center">
+            <div class="p-2.5 rounded-xl bg-gray-950/70 border border-gray-800">
+              <span class="text-[10px] uppercase text-gray-400 block font-medium">Solar Proton Fluctuation</span>
+              <span id="hudProtonRate" class="text-amber-400 text-sm font-bold font-mono-data">142 hits/sec</span>
+              <span class="text-[9px] text-gray-500 block">Transient $\Delta G < 2\%$</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-gray-950/70 border border-gray-800">
+              <span class="text-[10px] uppercase text-gray-400 block font-medium">GCR Heavy Ion $^{56}\text{Fe}$</span>
+              <span id="hudGCRRate" class="text-rose-400 text-sm font-bold font-mono-data">0.42 hits/min</span>
+              <span class="text-[9px] text-rose-500/80 block font-semibold">LET $\approx 150 \text{ keV}/\mu\text{m}$</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-gray-950/70 border border-gray-800">
+              <span class="text-[10px] uppercase text-gray-400 block font-medium">Observer Confidence</span>
+              <span id="hudConfidence" class="text-cyan-400 text-sm font-bold font-mono-data">99.2%</span>
+              <span class="text-[9px] text-gray-500 block">Bayesian Inversion</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 5 Cols: Primary Phase-Space Diagnostic Chart (E vs G) -->
+        <div class="lg:col-span-5 bg-gray-900/50 rounded-2xl border border-gray-800/80 p-4 flex flex-col justify-between backdrop-blur shadow-xl">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h2 class="text-sm font-semibold text-gray-200 tracking-wide uppercase">
+                Phase-Space: Conductance Loss vs Particle Energy
+              </h2>
+              <p class="text-xs text-gray-400">Energy Transfer $E$ (MeV) vs Remaining Conductance $G$ (nS)</p>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800 font-mono-data">
+              $(E, G)$ Observer
+            </span>
+          </div>
+
+          <div class="relative w-full h-[270px]">
+            <canvas id="phaseSpaceChart"></canvas>
+          </div>
+
+          <!-- State Explanation Capsule -->
+          <div class="mt-3 p-3 rounded-xl bg-gray-950/80 border border-gray-800 text-xs text-gray-300 space-y-1">
+            <div class="flex items-center justify-between font-mono-data text-[11px]">
+              <span class="text-cyan-300 font-semibold flex items-center gap-1">
+                <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Target Radiation State:
+              </span>
+              <span id="phaseStateBadge" class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
+                SAFE TRANSIT (BACKGROUND)
+              </span>
+            </div>
+            <p class="text-[11px] text-gray-400">
+              Solar protons trigger low-$E$, low-$\Delta G$ perturbations. High-charge heavy ions ($^{56}\text{Fe}$, $^{28}\text{Si}$) cause profound molecular strand cleavage, dropping trajectory into the <span class="text-rose-400 font-semibold">Critical Storm Zone</span>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Time-Series Analytics & Closed-Loop Controls -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 8 Cols: Dual Time-Series Real-Time Tracking -->
+        <div class="lg:col-span-8 bg-gray-900/50 rounded-2xl border border-gray-800/80 p-4 backdrop-blur shadow-xl space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-200 uppercase tracking-wide">Dynamic Array Bio-Telemetry</h3>
+              <p class="text-xs text-gray-400">Molecular Conductance Degradation & Instantaneous Double-Strand Cleavage Frequency</p>
+            </div>
+            <div class="flex space-x-2">
+              <span class="text-xs px-2.5 py-1 rounded-lg bg-gray-950 border border-gray-800 font-mono-data text-cyan-400">
+                Sampling Rate: 100 Hz
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Time-Series 1: Conductance G(t) -->
+            <div class="bg-gray-950/80 p-3 rounded-xl border border-gray-800/80">
+              <div class="flex justify-between items-center mb-1 text-xs">
+                <span class="font-medium text-gray-300">Array Conductance $G(t)$ [nS]</span>
+                <span id="metricConductanceVal" class="font-mono-data text-cyan-400 font-bold">4.82 nS</span>
+              </div>
+              <div class="h-40 w-full">
+                <canvas id="conductanceTimeChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Time-Series 2: Cumulative DNA Strand Breaks (DSBs) -->
+            <div class="bg-gray-950/80 p-3 rounded-xl border border-gray-800/80">
+              <div class="flex justify-between items-center mb-1 text-xs">
+                <span class="font-medium text-gray-300">DNA Cleavage Density [Breaks/mm²]</span>
+                <span id="metricDSBVal" class="font-mono-data text-rose-400 font-bold">12 breaks</span>
+              </div>
+              <div class="h-40 w-full">
+                <canvas id="cleavageRateChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 4 Cols: Autonomous Observer & Fault/Radiation Injection Controls -->
+        <div class="lg:col-span-4 bg-gray-900/50 rounded-2xl border border-gray-800/80 p-4 backdrop-blur shadow-xl flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between border-b border-gray-800 pb-2 mb-3">
+              <h3 class="text-sm font-semibold text-gray-200 uppercase tracking-wide flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i> Environmental Injection
+              </h3>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-mono-data">Loop Mode: CLOSED</span>
+            </div>
+
+            <!-- Solar Proton Slider -->
+            <div class="space-y-1.5 mb-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-300">Solar Proton Fluence Rate ($^1\text{H}^+$)</span>
+                <span id="valProtonSlider" class="font-mono-data text-amber-400 font-semibold">120 p/cm²·s</span>
+              </div>
+              <input type="range" id="sliderProtons" min="10" max="600" value="120" step="10" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-amber-400">
+            </div>
+
+            <!-- GCR Heavy Ion Spike Slider -->
+            <div class="space-y-1.5 mb-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-gray-300">GCR Iron Flux ($^{56}\text{Fe}$ Heavy Ions)</span>
+                <span id="valGCRSlider" class="font-mono-data text-rose-400 font-semibold">1.2 ions/min</span>
+              </div>
+              <input type="range" id="sliderGCR" min="0" max="15" value="1.2" step="0.2" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-rose-500">
+            </div>
+
+            <!-- Manual Radiation Pulse Injections -->
+            <div class="space-y-2 pt-1">
+              <span class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block">Fault & Particle Injections</span>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="injectSolarFlare()" class="px-3 py-2 rounded-lg bg-amber-950/50 hover:bg-amber-900/60 border border-amber-600/50 text-amber-200 text-xs font-medium flex items-center justify-center space-x-1.5 transition">
+                  <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                  <span>Solar Flare (Proton)</span>
+                </button>
+                <button onclick="injectGCRHeavyIon()" class="px-3 py-2 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/70 text-rose-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition animate-pulse">
+                  <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                  <span>Inject $^{56}\text{Fe}$ Iron Ion</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Automated Observer & Recovery Panel -->
+          <div class="p-3 rounded-xl bg-gray-950/90 border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i> Auto-Observer State
+              </span>
+              <span id="observerStatusPill" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono-data">
+                ARMED & MONITORING
+              </span>
+            </div>
+            <p class="text-[11px] text-gray-400 leading-relaxed">
+              When $\Delta G > 50\%$ from deep ionization tracks, the observer autonomous trigger signals the spacecraft's environmental bay to redirect greywater ballast into crew sleeping quarters.
+            </p>
+            <div class="flex space-x-2 pt-1">
+              <button onclick="resetArraySubstrate()" class="w-full py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition">
+                Flush & Re-Hybridize Sensor Array
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: CORE PHYSICS & MATHEMATICAL MODEL                                 -->
+    <!-- ========================================================================= -->
+    <div id="viewPhysics" class="hidden space-y-6">
+      
+      <!-- Header Banner -->
+      <div class="p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-cyan-950/30 to-gray-900/50 border border-purple-800/40 backdrop-blur">
+        <h2 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+          <i data-lucide="microscope" class="w-5 h-5 text-purple-400"></i>
+          Quantum Coherent $\pi$-Stack Transport & Bethe-Bloch Bragg Cleavage Physics
+        </h2>
+        <p class="text-xs text-gray-300 mt-1 max-w-4xl leading-relaxed">
+          The BioRad biosensor bridges cellular biology and solid-state quantum transport. Synthetic double-stranded DNA (dsDNA) oligomers immobilized across gold nanoelectrodes serve as active ballistic conductor channels. High Linear Energy Transfer (LET) galactic cosmic rays mechanically slice through base-pair stacks, collapsing quantum electron delocalization into detectable macroscopic conductance loss.
+        </p>
+      </div>
+
+      <!-- 4 Mathematical Architecture Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Card 1: Quantum Transport & pi-Stack Conductance -->
+        <div class="bg-gray-900/50 rounded-2xl border border-gray-800 p-5 space-y-3 backdrop-blur">
+          <div class="flex items-center space-x-2">
+            <div class="p-2 rounded-lg bg-cyan-950 border border-cyan-800 text-cyan-400">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">1. Ballistic Charge Transport via Molecular $\pi$-Stack</h3>
+          </div>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            In intact synthetic dsDNA, overlapping aromatic base pairs form a continuous $\pi$-conjugated corridor. Electrical conductance $G$ follows the Landauer-Büttiker formulation for 1D quasi-ballistic molecular wires, modulated by base-pair coupling transmission probabilities $T(E_F)$:
+          </p>
+          
+          <div class="formula-box">
+            $$G = \frac{2e^2}{h} \sum_{i=1}^{N_{\text{strands}}} \mathcal{T}_i(E_F) \cdot \exp\left(-\beta_{\text{hop}} L_i\right)$$
+          </div>
+
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Where $e^2/h \approx 38.74\ \mu\text{S}$ is the quantum conductance limit, $\mathcal{T}_i$ is the coherent electron tunneling transmission probability, $\beta_{\text{hop}} \approx 0.04\ \text{Å}^{-1}$ is the low-attenuation hopping constant in pristine $\pi$-stacks, and $L_i$ is the inter-electrode span (nominal 34 nm = 100 base pairs).
+          </p>
+        </div>
+
+        <!-- Card 2: Ionization Track Structure & LET Cleavage Kinetics -->
+        <div class="bg-gray-900/50 rounded-2xl border border-gray-800 p-5 space-y-3 backdrop-blur">
+          <div class="flex items-center space-x-2">
+            <div class="p-2 rounded-lg bg-rose-950 border border-rose-800 text-rose-400">
+              <i data-lucide="flame" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">2. Bethe-Bloch Ion Cleavage & Linear Energy Transfer</h3>
+          </div>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            Galactic cosmic rays are dominated by relativistic heavy ions (HZE particles like $^{56}\text{Fe}^{26+}$) possessing colossal Linear Energy Transfer (LET) as quantified by the relativistic Bethe-Bloch stopping power equation:
+          </p>
+
+          <div class="formula-box">
+            $$-\frac{dE}{dx} = 2\pi N_A r_e^2 m_e c^2 \rho \frac{Z}{A} \frac{z_{\text{eff}}^2}{\beta^2} \left[ \ln\left(\frac{2m_e c^2 \beta^2 \gamma^2 W_{\max}}{I^2}\right) - 2\beta^2 \right]$$
+          </div>
+
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Because stopping power scales with $z_{\text{eff}}^2$, an iron ion ($z=26$) deposits over **676 times more energy per micron** than a solar wind proton ($z=1$). This dense cylindrical plasma core (diameter $< 2.5\ \text{nm}$) instantly produces double-strand breaks (DSBs), terminating the $\pi$-stack channel permanently ($\mathcal{T}_i \to 0$).
+          </p>
+        </div>
+
+        <!-- Card 3: Diagnostic Observer & Phase Inversion Algorithm -->
+        <div class="bg-gray-900/50 rounded-2xl border border-gray-800 p-5 space-y-3 backdrop-blur">
+          <div class="flex items-center space-x-2">
+            <div class="p-2 rounded-lg bg-purple-950 border border-purple-800 text-purple-400">
+              <i data-lucide="binary" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">3. State Observer Inversion: Discriminating $^1\text{H}^+$ vs $^{56}\text{Fe}$</h3>
+          </div>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            Protons create mild electronic excitation and transient single-strand breaks (SSBs) that spontaneously anneal. Conversely, high-energy heavy ions destroy both sugar-phosphate backbones simultaneously. The onboard Kalman State Observer solves:
+          </p>
+
+          <div class="formula-box">
+            $$\mathbf{X}_{k+1} = \mathbf{\Phi}\mathbf{X}_k + \mathbf{\Gamma} \begin{bmatrix} \dot{E}_{\text{dep}} \\ \Delta G(t) \end{bmatrix} + \mathbf{w}_k, \quad \mathcal{H}_{\text{hazard}} = \frac{|\Delta G / \Delta t|}{\int E \, dE} > \Theta_{\text{critical}}$$
+          </div>
+
+          <p class="text-xs text-gray-400 leading-relaxed">
+            When the ratio of instantaneous conductance loss step-function $|\Delta G/\Delta t|$ to the energy deposition rate breaches threshold $\Theta_{\text{critical}} = 0.42\ \text{nS}/\text{MeV}$, the event is definitively classified as an HZE GCR core rather than a solar proton ripple.
+          </p>
+        </div>
+
+        <!-- Card 4: Nanofabricated Solid-State Substrate Specifications -->
+        <div class="bg-gray-900/50 rounded-2xl border border-gray-800 p-5 space-y-3 backdrop-blur">
+          <div class="flex items-center space-x-2">
+            <div class="p-2 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-400">
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider">4. Bio-Nanofluidic Substrate & Self-Assembly Specs</h3>
+          </div>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            The physical device uses electron-beam lithography defined interdigitated gold nanoelectrodes with terminal thiol (-SH) anchoring chemistry:
+          </p>
+
+          <div class="formula-box">
+            $$\text{Au}_{\text{electrode}} + \text{HS}-(\text{CH}_2)_6-\text{dsDNA} \xrightarrow{\Delta H_{\text{chem}} = -160\ \text{kJ/mol}} \text{Au}-\text{S}-(\text{CH}_2)_6-\text{dsDNA} + \frac{1}{2}\text{H}_2$$
+          </div>
+
+          <div class="text-xs text-gray-400 space-y-1 pt-1">
+            <div class="flex justify-between border-b border-gray-800/80 py-1">
+              <span>Electrode Gap Spacing:</span>
+              <span class="font-mono-data text-cyan-300">30 nm $\pm$ 2 nm (E-Beam Nano-trench)</span>
+            </div>
+            <div class="flex justify-between border-b border-gray-800/80 py-1">
+              <span>Array Density:</span>
+              <span class="font-mono-data text-cyan-300">$10^7$ parallel immobilized dsDNA duplexes/mm²</span>
+            </div>
+            <div class="flex justify-between border-b border-gray-800/80 py-1">
+              <span>Oligomer Sequence:</span>
+              <span class="font-mono-data text-cyan-300">5'-Thiol-(CG)_{50}-Thiol-3' (Alternating GC duplex)</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span>Readout Microelectronics:</span>
+              <span class="font-mono-data text-cyan-300">Radiation-hardened CMOS 65nm TIA (10 fA noise floor)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: $225,000 NASA SBIR/STTR PROPOSAL & HARDWARE TRANSITION             -->
+    <!-- ========================================================================= -->
+    <div id="viewProposal" class="hidden space-y-6">
+      
+      <!-- Solicitation Metadata Banner -->
+      <div class="p-6 rounded-2xl bg-gradient-to-r from-gray-900 via-gray-950 to-blue-950/40 border border-gray-800 shadow-xl">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-800 pb-4 mb-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 text-xs font-bold uppercase">
+                NASA SBIR / STTR FY2026 Phase I
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 text-xs font-mono-data">
+                Topic T4.02
+              </span>
+            </div>
+            <h2 class="text-xl font-bold text-white tracking-wide mt-1">
+              BioRad: Solid-State Nanofabricated Synthetic DNA Biosensor for Real-Time Galactic Cosmic Ray Biological Lethality Dosimetry
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">Focus Area: Space Biology & Crew Health Countermeasures for Deep-Space Crewed Transit</p>
+          </div>
+          <div class="text-left md:text-right font-mono-data">
+            <div class="text-xs text-gray-400">Total Phase I Budget</div>
+            <div class="text-2xl font-bold text-emerald-400">$225,000</div>
+            <div class="text-[11px] text-gray-500">Duration: 6 Months (TRL 2 $\to$ TRL 4)</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+            <span class="text-gray-400 block mb-1">Small Business Enterprise:</span>
+            <span class="text-white font-semibold block text-sm">BioRad Quantum Bio-Sensing Inc.</span>
+            <span class="text-cyan-400 font-mono-data text-[11px]">$157,500 Allocation (70.0%)</span>
+          </div>
+          <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+            <span class="text-gray-400 block mb-1">Research Institution Partner (STTR):</span>
+            <span class="text-white font-semibold block text-sm">University of Central Florida (UCF)</span>
+            <span class="text-purple-400 font-mono-data text-[11px]">$67,500 Subcontract (30.0%)</span>
+          </div>
+          <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+            <span class="text-gray-400 block mb-1">Partner Facilities:</span>
+            <span class="text-white font-semibold block text-sm">UCF CATER Labs & Biomolecular Nanotech</span>
+            <span class="text-emerald-400 font-mono-data text-[11px]">E-Beam Lithography & In-Situ Beamline</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6-Month Work Breakdown Milestones -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-semibold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="calendar" class="w-4 h-4 text-cyan-400"></i> Phase I 6-Month Milestone Execution Roadmap
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <!-- Milestone 1 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-mono-data text-[10px]">MONTHS 1–2</span>
+                <span class="text-cyan-400 font-bold text-xs">$45,000</span>
+              </div>
+              <h4 class="text-sm font-semibold text-white">Quantum $\pi$-Stack Transport Modeling</h4>
+              <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                Develop non-equilibrium Green's function (NEGF) simulation code calibrated to 34-nm duplex GC-oligomer electrical conductance in vacuum and low-moisture hermetic capsules.
+              </p>
+            </div>
+            <div class="text-[11px] font-mono-data text-gray-500 pt-2 border-t border-gray-800">
+              Deliverable: D1 Numerical Inversion Code
+            </div>
+          </div>
+
+          <!-- Milestone 2 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-mono-data text-[10px]">MONTHS 2–3</span>
+                <span class="text-cyan-400 font-bold text-xs">$55,000</span>
+              </div>
+              <h4 class="text-sm font-semibold text-white">State Observer Inversion Algorithm</h4>
+              <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                Formulate Bayesian $(E, G)$ discriminator capable of deconvolving transient proton noise from permanent double-strand break (DSB) cleavage steps at sub-millisecond latencies.
+              </p>
+            </div>
+            <div class="text-[11px] font-mono-data text-gray-500 pt-2 border-t border-gray-800">
+              Deliverable: D2 Real-Time Firmware Package
+            </div>
+          </div>
+
+          <!-- Milestone 3 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-mono-data text-[10px]">MONTHS 3–5</span>
+                <span class="text-cyan-400 font-bold text-xs">$70,000</span>
+              </div>
+              <h4 class="text-sm font-semibold text-white">UCF CATER Nanofabrication & Testing</h4>
+              <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                Fabricate 10 prototype chips using 30-nm gold electrode arrays. Immobilize thiolated oligonucleotides and validate electrical baselines inside UCF high-vacuum cryo-chambers.
+              </p>
+            </div>
+            <div class="text-[11px] font-mono-data text-purple-400 pt-2 border-t border-gray-800">
+              Deliverable: D3 Benchtop Biosensor Hardware
+            </div>
+          </div>
+
+          <!-- Milestone 4 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-mono-data text-[10px]">MONTH 6</span>
+                <span class="text-cyan-400 font-bold text-xs">$55,000</span>
+              </div>
+              <h4 class="text-sm font-semibold text-white">Phase II Transition & Flight Spec</h4>
+              <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                Benchmark chips under simulated heavy-ion accelerator irradiation (Texas A&M Cyclotron or Brookhaven NASA Space Radiation Lab NSRL). Complete Phase II scaling roadmap.
+              </p>
+            </div>
+            <div class="text-[11px] font-mono-data text-emerald-400 pt-2 border-t border-gray-800">
+              Deliverable: D4 Final Phase II Proposal ($1.2M)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase II Hardware Transition Details -->
+      <div class="p-5 rounded-2xl bg-gray-900/40 border border-gray-800 space-y-3">
+        <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="rocket" class="w-4 h-4 text-purple-400"></i> Phase II Hardware Prototyping & Flight Demonstration Pathway ($850k–$1.2M)
+        </h3>
+        <p class="text-xs text-gray-300 leading-relaxed">
+          Phase II will advance BioRad from TRL 4 to TRL 6 by integrating 16 micro-array chips into a modular, radiation-hardened CubeSat payload (BioRad-Alpha) slated for lunar orbital deployment on Artemis Gateway or commercial lunar payload services (CLPS). The hardware utilizes hermetic sapphire-window ceramic packaging, low-power ASICs, and an automated fluidic channel for in-situ microfluidic array re-hybridization.
+        </p>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: COMMERCIAL & NATIONWIDE ARR BREAKDOWN                               -->
+    <!-- ========================================================================= -->
+    <div id="viewARR" class="hidden space-y-6">
+      
+      <!-- Executive Summary & Valuation Top Callout -->
+      <div class="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-cyan-950/30 to-gray-900 border border-emerald-600/40 shadow-xl">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold uppercase tracking-wider">
+              Civil & Commercial Market Strategy
+            </span>
+            <h2 class="text-2xl font-bold text-white tracking-wide mt-1.5">
+              $214.2M Mature Civil ARR Nationwide
+            </h2>
+            <p class="text-xs text-gray-300 max-w-3xl mt-1 leading-relaxed">
+              BioRad's real-time DNA strand-break quantum sensing is directly applicable beyond interplanetary astronautics. By converting biological macromolecular damage into solid-state micro-conductance telemetry, BioRad eliminates weeks of offline gel electrophoresis and PCR assays across commercial clinical, aerospace, semiconductor, and industrial sectors.
+            </p>
+          </div>
+          <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 text-left md:text-right font-mono-data min-w-[200px]">
+            <div class="text-[11px] text-gray-400">Enterprise Valuation Multiple</div>
+            <div class="text-xl font-bold text-emerald-400">10x SaaS / ARR</div>
+            <div class="text-xs text-cyan-300 font-bold mt-0.5">$2.14 Billion Implied Value</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Commercial ARR Breakdown Table -->
+      <div class="bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden backdrop-blur shadow-xl">
+        <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+          <h3 class="text-sm font-semibold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="table" class="w-4 h-4 text-cyan-400"></i> Civil Market Verticals & Revenue Projections
+          </h3>
+          <span class="text-xs font-mono-data text-emerald-400">6 Scalable Civil Verticals</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-300">
+            <thead class="bg-gray-950/80 uppercase font-mono-data text-[11px] text-gray-400 border-b border-gray-800">
+              <tr>
+                <th class="py-3 px-4">Market Vertical</th>
+                <th class="py-3 px-4">Primary Application</th>
+                <th class="py-3 px-4">Software / Telemetry Pricing</th>
+                <th class="py-3 px-4">Nationwide Asset Base</th>
+                <th class="py-3 px-4 text-right">Mature ARR</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800/60 font-mono-data text-xs">
+              <tr class="hover:bg-gray-800/30 transition">
+                <td class="py-3.5 px-4 font-semibold text-white">Commercial Aviation</td>
+                <td class="py-3.5 px-4 text-gray-300">Polar Airline Route Cosmic Radiation Dosimeters</td>
+                <td class="py-3.5 px-4 text-cyan-300">$4,800 / aircraft-year</td>
+                <td class="py-3.5 px-4">12,500 commercial passenger fleet</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$60.0M</td>
+              </tr>
+              <tr class="hover:bg-gray-800/30 transition">
+                <td class="py-3.5 px-4 font-semibold text-white">Clinical Proton Therapy</td>
+                <td class="py-3.5 px-4 text-gray-300">Real-Time Tumor Bragg-Peak DNA Dose Verification</td>
+                <td class="py-3.5 px-4 text-cyan-300">$45,000 / treatment suite/yr</td>
+                <td class="py-3.5 px-4">840 medical oncology gantries</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$37.8M</td>
+              </tr>
+              <tr class="hover:bg-gray-800/30 transition">
+                <td class="py-3.5 px-4 font-semibold text-white">Semiconductor Lithography</td>
+                <td class="py-3.5 px-4 text-gray-300">High-NA EUV Ionization Stray-Scatter Monitoring</td>
+                <td class="py-3.5 px-4 text-cyan-300">$60,000 / scanner chamber/yr</td>
+                <td class="py-3.5 px-4">650 advanced foundry cleanrooms</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$39.0M</td>
+              </tr>
+              <tr class="hover:bg-gray-800/30 transition">
+                <td class="py-3.5 px-4 font-semibold text-white">Commercial Space Stations</td>
+                <td class="py-3.5 px-4 text-gray-300">LEO Habitat Radiation Health Real-Time Network</td>
+                <td class="py-3.5 px-4 text-cyan-300">$180,000 / private habitat module</td>
+                <td class="py-3.5 px-4">110 private station berths</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$19.8M</td>
+              </tr>
+              <tr class="hover:bg-gray-800/30 transition">
+                <td class="py-3.5 px-4 font-semibold text-white">Biopharma Radiotherapeutics</td>
+                <td class="py-3.5 px-4 text-gray-300">Targeted Alpha Therapy (TAT) Cleavage Kinetics</td>
+                <td class="py-3.5 px-4 text-cyan-300">$120,000 / lab installation/yr</td>
+                <td class="py-3.5 px-4">270 radiopharmacy R&D pipelines</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$32.4M</td>
+              </tr>
+              <tr class="hover:bg-gray-800/30 transition">
+                <td class="py-3.5 px-4 font-semibold text-white">Nuclear Medicine Transport</td>
+                <td class="py-3.5 px-4 text-gray-300">Radiopharmaceutical Cold-Chain Degradation Biosensing</td>
+                <td class="py-3.5 px-4 text-cyan-300">$550 / active cryo-canister</td>
+                <td class="py-3.5 px-4">46,000 shipments nationwide</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$25.3M</td>
+              </tr>
+              <tr class="bg-gray-950 font-bold border-t-2 border-gray-700">
+                <td colspan="4" class="py-3 px-4 text-right text-gray-200">TOTAL NATIONWIDE TARGET CIVIL ARR:</td>
+                <td class="py-3 px-4 text-right text-emerald-400 text-sm">$214.2M</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detailed Vertical Deep Dives (Why Others Missed This) -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-semibold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> Vertical Deep-Dives: Physics & Incumbent Vulnerabilities
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <!-- Deep Dive 1 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2">
+            <h4 class="text-sm font-bold text-cyan-300">Commercial High-Altitude Aviation</h4>
+            <p class="text-xs text-gray-300">
+              <strong class="text-white">Physics in 1 Sentence:</strong> Secondary cosmic neutron cascades at 41,000 ft sever covalent DNA bonds in flight crew tissue proportional to continuous micro-stack resistance loss.
+            </p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              <strong class="text-gray-300">Why Others Missed This:</strong> Legacy airlines rely on passive thermoluminescent silicon dosimeters (TLDs) read once every 90 days offline, entirely missing acute solar particle event (SPE) dose spikes during polar routing.
+            </p>
+          </div>
+
+          <!-- Deep Dive 2 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2">
+            <h4 class="text-sm font-bold text-cyan-300">Clinical Proton & Heavy-Ion Oncology</h4>
+            <p class="text-xs text-gray-300">
+              <strong class="text-white">Physics in 1 Sentence:</strong> Bragg peak ion stops deposit localized keV/$\mu\text{m}$ damage directly verifiable by real-time $dG/dt$ decay rates.
+            </p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              <strong class="text-gray-300">Why Others Missed This:</strong> Hospitals infer biological dose via passive ionization gas chambers, which measure physical charge rather than true biological double-strand break lethality in real human-homologous chromatin.
+            </p>
+          </div>
+
+          <!-- Deep Dive 3 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2">
+            <h4 class="text-sm font-bold text-cyan-300">High-NA EUV Semiconductor Foundry</h4>
+            <p class="text-xs text-gray-300">
+              <strong class="text-white">Physics in 1 Sentence:</strong> 13.5 nm extreme ultraviolet photons induce high-energy secondary photoelectrons that cause nanoscopic dielectric breakdown modeled precisely by biomolecular arrays.
+            </p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              <strong class="text-gray-300">Why Others Missed This:</strong> Wafer fabs use macroscopic silicon diodes that saturate under intense EUV plasma bursts, failing to capture subtle sub-nanometer stochastic defect formation in photoresist layers.
+            </p>
+          </div>
+
+          <!-- Deep Dive 4 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2">
+            <h4 class="text-sm font-bold text-cyan-300">Commercial Space Station Habitats</h4>
+            <p class="text-xs text-gray-300">
+              <strong class="text-white">Physics in 1 Sentence:</strong> Trapped South Atlantic Anomaly (SAA) protons produce low-impedance high-frequency electrical flutter distinct from GCR destructive step-functions.
+            </p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              <strong class="text-gray-300">Why Others Missed This:</strong> Legacy space habitats depend on heavy, bulky tissue-equivalent proportional counters (TEPC) that draw tens of watts and require high-voltage gas tanks unsuited for compact commercial cabins.
+            </p>
+          </div>
+
+          <!-- Deep Dive 5 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2">
+            <h4 class="text-sm font-bold text-cyan-300">Targeted Alpha Radiopharmaceuticals</h4>
+            <p class="text-xs text-gray-300">
+              <strong class="text-white">Physics in 1 Sentence:</strong> Short-range 5 MeV alpha emissions ($^{225}\text{Ac}$, $^{223}\text{Ra}$) completely rupture nearby synthetic DNA duplexes within a 50-$\mu\text{m}$ radius.
+            </p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              <strong class="text-gray-300">Why Others Missed This:</strong> Pharma developers sacrifice animal cohorts over 4-week spans to count chromosomal aberrations, whereas BioRad yields instant in-vitro potency measurements in 60 seconds.
+            </p>
+          </div>
+
+          <!-- Deep Dive 6 -->
+          <div class="bg-gray-900/50 rounded-xl border border-gray-800 p-4 space-y-2">
+            <h4 class="text-sm font-bold text-cyan-300">Radiopharmaceutical Cold-Chain Logistics</h4>
+            <p class="text-xs text-gray-300">
+              <strong class="text-white">Physics in 1 Sentence:</strong> Radiolytic self-decomposition of short-lived radio-ligands generates reactive oxygen species (ROS) that degrade molecular conductance exponentially.
+            </p>
+            <p class="text-xs text-gray-400 leading-relaxed">
+              <strong class="text-gray-300">Why Others Missed This:</strong> Couriers rely on simple temperature dataloggers that completely overlook nuclear self-irradiation decay during shipping delays.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collaboration Callout -->
+      <div class="p-4 rounded-xl bg-gray-950 border border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h4 class="text-sm font-semibold text-white">Direct Principal Investigator & Licensing Contact</h4>
+          <p class="text-xs text-gray-400">BioRad Spaceflight Bio-Sensing Consortium | NASA SBIR Phase I/II Transition Office</p>
+        </div>
+        <a href="mailto:support@rfwavecode.com" class="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs tracking-wider transition uppercase flex items-center space-x-2 shadow-lg shadow-cyan-950/50">
+          <i data-lucide="mail" class="w-4 h-4"></i>
+          <span>support@rfwavecode.com</span>
+        </a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT LOGIC & SIMULATION ENGINE -->
+  <script>
+    // Tab Switching Dictionary & State Management
+    const tabMapping = {
+      'sim': { viewId: 'viewSim', btnId: 'tabBtnSim' },
+      'physics': { viewId: 'viewPhysics', btnId: 'tabBtnPhysics' },
+      'proposal': { viewId: 'viewProposal', btnId: 'tabBtnProposal' },
+      'arr': { viewId: 'viewARR', btnId: 'tabBtnARR' }
+    };
+
+    function switchTab(activeKey) {
+      Object.keys(tabMapping).forEach(key => {
+        const item = tabMapping[key];
+        const viewEl = document.getElementById(item.viewId);
+        const btnEl = document.getElementById(item.btnId);
+
+        if (key === activeKey) {
+          viewEl.classList.remove('hidden');
+          btnEl.className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-white bg-cyan-600/30 border border-cyan-500/50 shadow-sm flex items-center space-x-1.5";
+        } else {
+          viewEl.classList.add('hidden');
+          btnEl.className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5";
+        }
+      });
+
+      // Typeset formulas when tab is displayed
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+
+      // Re-measure canvas if returning to simulation
+      if (activeKey === 'sim') {
+        setTimeout(() => {
+          resizeCanvas();
+        }, 50);
+      }
+    }
+
+    // =========================================================================
+    // SIMULATION STATE & VARIABLES
+    // =========================================================================
+    let currentConductance = 4.82; // nS baseline
+    const nominalConductance = 5.0; // pristine state
+    let totalDSBs = 12; // Double-strand breaks count
+    let protonFlux = 120; // Protons per cm2*s
+    let gcrIronFlux = 1.2; // GCR Fe ions/min
+    let stormShelterActive = false;
+    let lastHitTimestamp = Date.now();
+    let hitAnimationParticles = [];
+    let phaseHistoryPoints = [];
+
+    // DNA Array Nanostructure Grid definition for Canvas
+    const DNA_STRANDS = [];
+    const NUM_STRANDS = 28;
+
+    function initDNAStrands() {
+      DNA_STRANDS.length = 0;
+      for (let i = 0; i < NUM_STRANDS; i++) {
+        DNA_STRANDS.push({
+          xRatio: (i + 1) / (NUM_STRANDS + 1),
+          intact: true,
+          phase: Math.random() * Math.PI * 2,
+          currentFlutter: 0,
+          brokenTime: 0
+        });
+      }
+    }
+
+    // Canvas Configuration
+    const canvas = document.getElementById('bioChipCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 600;
+      const h = rect.height || 320;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      if (phaseChart) phaseChart.resize();
+      if (timeConductanceChart) timeConductanceChart.resize();
+      if (timeDSBChart) timeDSBChart.resize();
+    });
+
+    // =========================================================================
+    // CHART.JS TELEMETRY CHARTS
+    // =========================================================================
+    let phaseChart, timeConductanceChart, timeDSBChart;
+
+    function initCharts() {
+      Chart.defaults.color = '#94a3b8';
+      Chart.defaults.borderColor = '#1e293b';
+      Chart.defaults.font.family = 'JetBrains Mono, monospace';
+
+      // 1. Primary Phase-Space Chart: E vs G
+      const ctxPhase = document.getElementById('phaseSpaceChart').getContext('2d');
+      
+      // Nominal baseline curve data points (theoretical)
+      const nominalCurve = [];
+      for (let e = 10; e <= 1200; e += 60) {
+        // High energy heavy ions drop conductance sharply
+        const gEst = Math.max(0.4, 4.95 - 0.0035 * e);
+        nominalCurve.push({ x: e, y: gEst });
+      }
+
+      phaseChart = new Chart(ctxPhase, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: 'Storm Hazard Boundary',
+              data: [
+                { x: 300, y: 0.1 },
+                { x: 300, y: 2.2 },
+                { x: 1200, y: 2.2 },
+                { x: 1200, y: 0.1 }
+              ],
+              showLine: true,
+              borderColor: 'rgba(239, 68, 68, 0.8)',
+              borderDash: [5, 5],
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              fill: true,
+              pointRadius: 0
+            },
+            {
+              label: 'Nominal Solar Background Corridor',
+              data: [
+                { x: 10, y: 4.8 },
+                { x: 80, y: 4.9 },
+                { x: 180, y: 4.6 },
+                { x: 260, y: 4.7 }
+              ],
+              borderColor: 'rgba(56, 189, 248, 0.4)',
+              backgroundColor: 'transparent',
+              showLine: true,
+              borderWidth: 2,
+              pointRadius: 2,
+              pointBackgroundColor: '#38bdf8'
+            },
+            {
+              label: 'Real-Time Telemetry Hits (E, G)',
+              data: [
+                { x: 45, y: 4.85 },
+                { x: 110, y: 4.78 },
+                { x: 62, y: 4.81 }
+              ],
+              backgroundColor: '#06b6d4',
+              borderColor: '#22d3ee',
+              pointRadius: 5,
+              pointHoverRadius: 8
+            },
+            {
+              label: 'Active Ionization Trajectory Head',
+              data: [{ x: 62, y: 4.81 }],
+              backgroundColor: '#f43f5e',
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 10
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 300 },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Particle Energy E [MeV]',
+                color: '#cbd5e1',
+                font: { size: 10 }
+              },
+              min: 0,
+              max: 1200,
+              grid: { color: '#111827' }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Conductance G [nS]',
+                color: '#cbd5e1',
+                font: { size: 10 }
+              },
+              min: 0,
+              max: 6,
+              grid: { color: '#111827' }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { boxWidth: 10, font: { size: 9 }, color: '#94a3b8' }
+            }
+          }
+        }
+      });
+
+      // 2. Time-Series: Conductance G(t)
+      const ctxCond = document.getElementById('conductanceTimeChart').getContext('2d');
+      timeConductanceChart = new Chart(ctxCond, {
+        type: 'line',
+        data: {
+          labels: Array(25).fill('').map((_, i) => `${i}s`),
+          datasets: [{
+            label: 'G(t) [nS]',
+            data: Array(25).fill(4.82),
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+            fill: true,
+            tension: 0.25,
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: { display: false },
+            y: {
+              min: 0,
+              max: 6,
+              grid: { color: '#111827' }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // 3. Time-Series: Cleavage DSB Density
+      const ctxDSB = document.getElementById('cleavageRateChart').getContext('2d');
+      timeDSBChart = new Chart(ctxDSB, {
+        type: 'line',
+        data: {
+          labels: Array(25).fill('').map((_, i) => `${i}s`),
+          datasets: [{
+            label: 'DSBs',
+            data: Array(25).fill(12),
+            borderColor: '#f43f5e',
+            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+            fill: true,
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: { display: false },
+            y: {
+              min: 0,
+              max: 60,
+              grid: { color: '#111827' }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    // =========================================================================
+    // PHYSICAL SIMULATION & ANIMATION LOOP
+    // =========================================================================
+    let timeTick = 0;
+
+    function renderSimulation() {
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+
+      // Clear Canvas
+      ctx.fillStyle = '#02050e';
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw Top Gold Electrode (+120 mV Anode)
+      const electrodeHeight = 28;
+      const gradAnode = ctx.createLinearGradient(0, 0, 0, electrodeHeight);
+      gradAnode.addColorStop(0, '#f59e0b');
+      gradAnode.addColorStop(1, '#78350f');
+      ctx.fillStyle = gradAnode;
+      ctx.fillRect(0, 0, w, electrodeHeight);
+
+      // Gold Electrode Labels
+      ctx.fillStyle = '#fef3c7';
+      ctx.font = '9px "JetBrains Mono"';
+      ctx.fillText('NANOELECTRODE ANODE (+120 mV DC BIAS) — Au (111) THIOL MONOLAYER', 14, 18);
+
+      // Draw Bottom Gold Electrode (Cathode Ground)
+      const gradCathode = ctx.createLinearGradient(0, h - electrodeHeight, 0, h);
+      gradCathode.addColorStop(0, '#78350f');
+      gradCathode.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = gradCathode;
+      ctx.fillRect(0, h - electrodeHeight, w, electrodeHeight);
+
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillText('NANOELECTRODE CATHODE (VIRTUAL GND) — TRANS-ARRAY TIA DETECTOR', 14, h - 11);
+
+      // Draw Micro-Channel Gap Guideline
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(10, electrodeHeight + 2, w - 20, h - (electrodeHeight * 2) - 4);
+      ctx.setLineDash([]);
+
+      const topY = electrodeHeight;
+      const bottomY = h - electrodeHeight;
+      const span = bottomY - topY;
+
+      // Draw Synthetic DNA Double-Strand Arrays
+      timeTick += 0.05;
+      DNA_STRANDS.forEach((strand, idx) => {
+        const x = strand.xRatio * w;
+        strand.phase += 0.03;
+
+        ctx.lineWidth = 2.5;
+
+        if (strand.intact) {
+          // Normal Double Helix Representation
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(6, 182, 212, 0.7)'; // Cyan backbone
+
+          // Draw double-helix sine wave
+          const waveAmp = 5;
+          const cycles = 4;
+          for (let y = topY; y <= bottomY; y += 4) {
+            const relY = (y - topY) / span;
+            const xOffset = Math.sin(relY * Math.PI * 2 * cycles + strand.phase) * waveAmp;
+            if (y === topY) ctx.moveTo(x + xOffset, y);
+            else ctx.lineTo(x + xOffset, y);
+          }
+          ctx.stroke();
+
+          // Second complementary strand (pi-stacked)
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(139, 92, 246, 0.6)'; // Violet base-pairs
+          for (let y = topY; y <= bottomY; y += 4) {
+            const relY = (y - topY) / span;
+            const xOffset = Math.sin(relY * Math.PI * 2 * cycles + strand.phase + Math.PI) * waveAmp;
+            if (y === topY) ctx.moveTo(x + xOffset, y);
+            else ctx.lineTo(x + xOffset, y);
+          }
+          ctx.stroke();
+
+          // Draw electron charge transport quantum dots moving downward
+          const electronCount = 2;
+          for (let e = 0; e < electronCount; e++) {
+            const progress = (timeTick * 0.4 + (e / electronCount) + (idx * 0.1)) % 1;
+            const ey = topY + progress * span;
+            const ex = x + Math.sin(progress * Math.PI * 2 * cycles + strand.phase) * 3;
+            
+            ctx.fillStyle = '#67e8f9';
+            ctx.shadowColor = '#22d3ee';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(ex, ey, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // reset
+          }
+        } else {
+          // Broken Strand: Severed Double-Strand Break (DSB)
+          const breakRatio = 0.52;
+          const breakY = topY + span * breakRatio;
+
+          // Upper fragment curled back toward anode
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+          ctx.moveTo(x, topY);
+          ctx.bezierCurveTo(x - 12, breakY - 20, x + 15, breakY - 10, x - 8, breakY - 6);
+          ctx.stroke();
+
+          // Lower fragment dangling to cathode
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+          ctx.moveTo(x + 10, breakY + 12);
+          ctx.bezierCurveTo(x - 10, breakY + 25, x + 12, bottomY - 15, x, bottomY);
+          ctx.stroke();
+
+          // Draw cleavage spark icon at severed point
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(x, breakY, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Render Dynamic Incident Particle Tracks / Ionization Events
+      for (let i = hitAnimationParticles.length - 1; i >= 0; i--) {
+        const p = hitAnimationParticles[i];
+        p.life -= 0.025;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = p.glow;
+
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 3.5, p.y - p.vy * 3.5);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Check intersection with intact DNA strands
+        if (p.isHZE && p.life > 0.4) {
+          DNA_STRANDS.forEach(strand => {
+            const sx = strand.xRatio * w;
+            if (strand.intact && Math.abs(p.x - sx) < 14 && p.y > topY && p.y < bottomY) {
+              strand.intact = false;
+              strand.brokenTime = Date.now();
+              // Spawn cleavage plasma debris
+              createShatterSparks(sx, p.y);
+              registerStrandCleavageEvent();
+            }
+          });
+        }
+
+        if (p.life <= 0) {
+          hitAnimationParticles.splice(i, 1);
+        }
+      }
+    }
+
+    function createShatterSparks(x, y) {
+      for (let i = 0; i < 8; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = 1 + Math.random() * 3;
+        hitAnimationParticles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          life: 0.6,
+          color: '#fb7185',
+          size: 1.5,
+          glow: 8,
+          isHZE: false
+        });
+      }
+    }
+
+    // =========================================================================
+    // RADIATION LOGIC & OBSERVER EVENT HANDLERS
+    // =========================================================================
+    function injectSolarFlare() {
+      // Solar Protons: High fluence, low-LET ionization (light deflection, benign)
+      document.getElementById('hudLastHitType').innerHTML = "<span class='text-amber-400 font-bold'>Solar Proton Burst ($^1\\text{H}^+$)</span>";
+      
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      for (let i = 0; i < 20; i++) {
+        hitAnimationParticles.push({
+          x: Math.random() * w,
+          y: 0,
+          vx: (Math.random() - 0.5) * 2,
+          vy: 6 + Math.random() * 5,
+          life: 0.9,
+          color: '#fbbf24', // Amber
+          size: 1.5,
+          glow: 4,
+          isHZE: false
+        });
+      }
+
+      // Protons cause minor transient noise (reversible polar drift)
+      const transientDrop = 0.08 + Math.random() * 0.06;
+      currentConductance = Math.max(0.2, currentConductance - transientDrop);
+      
+      // Push event into phase chart
+      const energyE = 35 + Math.random() * 110; // MeV
+      recordTelemetryHit(energyE, currentConductance, 'proton');
+
+      // Recover conductance gradually (spontaneous annealing)
+      setTimeout(() => {
+        currentConductance = Math.min(nominalConductance, currentConductance + transientDrop * 0.85);
+      }, 700);
+    }
+
+    function injectGCRHeavyIon() {
+      // High-Z High-LET Iron Ion (56Fe): Slices straight through multiple strands
+      document.getElementById('hudLastHitType').innerHTML = "<span class='text-rose-400 font-bold'>$^{56}\\text{Fe}$ Iron Ion Track</span>";
+      
+      const w = canvas.width / (window.devicePixelRatio || 1);
+      const h = canvas.height / (window.devicePixelRatio || 1);
+
+      const startX = Math.random() * (w * 0.7) + w * 0.15;
+      const angle = (Math.PI / 2) + (Math.random() - 0.5) * 0.4;
+      const speed = 14;
+
+      hitAnimationParticles.push({
+        x: startX,
+        y: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        color: '#f43f5e', // Hot rose
+        size: 4.5,
+        glow: 14,
+        isHZE: true
+      });
+
+      // Sharp permanent conductance drop
+      const energyE = 680 + Math.random() * 450; // High MeV
+      currentConductance = Math.max(0.3, currentConductance - 0.58);
+      recordTelemetryHit(energyE, currentConductance, 'iron');
+
+      // Observer threshold evaluation
+      evaluateRadiationHazardState();
+    }
+
+    function registerStrandCleavageEvent() {
+      totalDSBs += 1;
+      document.getElementById('metricDSBVal').textContent = `${totalDSBs} breaks`;
+    }
+
+    function recordTelemetryHit(e, g, type) {
+      if (!phaseChart) return;
+
+      // Update Phase-Space Chart datasets
+      const scatterSet = phaseChart.data.datasets[2].data;
+      if (scatterSet.length > 20) scatterSet.shift();
+      scatterSet.push({ x: Math.round(e), y: Number(g.toFixed(2)) });
+
+      // Active cursor
+      phaseChart.data.datasets[3].data = [{ x: Math.round(e), y: Number(g.toFixed(2)) }];
+      phaseChart.update('none');
+
+      // Update UI Telemetry Readouts
+      document.getElementById('hudConductance').textContent = `${g.toFixed(2)} nS`;
+      document.getElementById('metricConductanceVal').textContent = `${g.toFixed(2)} nS`;
+    }
+
+    function evaluateRadiationHazardState() {
+      const banner = document.getElementById('stormShelterBanner');
+      const badge = document.getElementById('phaseStateBadge');
+      const observerPill = document.getElementById('observerStatusPill');
+
+      if (currentConductance < 2.4 || totalDSBs > 22) {
+        // HAZARD BREACHED
+        banner.classList.remove('hidden');
+        badge.className = "px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold animate-pulse";
+        badge.textContent = "CRITICAL: GCR SPIKE DETECTED";
+
+        observerPill.className = "text-[10px] px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-mono-data font-bold animate-pulse";
+        observerPill.textContent = "STORM ALARM TRIGGERED";
+      } else {
+        banner.classList.add('hidden');
+        badge.className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold";
+        badge.textContent = "SAFE TRANSIT (BACKGROUND)";
+
+        observerPill.className = "text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono-data";
+        observerPill.textContent = "ARMED & MONITORING";
+      }
+
+      // Integrity update
+      const intactCount = DNA_STRANDS.filter(s => s.intact).length;
+      const integrityPct = ((intactCount / NUM_STRANDS) * 100).toFixed(1);
+      document.getElementById('statIntegrity').textContent = `${integrityPct}%`;
+      document.getElementById('statIntegrity').className = integrityPct > 60 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold animate-pulse";
+    }
+
+    function emergencyStormShelterSeal() {
+      stormShelterActive = true;
+      const banner = document.getElementById('stormShelterBanner');
+      banner.innerHTML = `
+        <div class="flex items-center space-x-3">
+          <div class="p-2 rounded-lg bg-emerald-900/60 border border-emerald-500">
+            <i data-lucide="shield-check" class="w-6 h-6 text-emerald-300"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-100">
+              WATER-SHIELDED STORM SHELTER SECURED
+            </h3>
+            <p class="text-xs text-emerald-300/90">Crew quarters surrounded by 40 cm H₂O radiation attenuation wall. GCR dose rate reduced by 88%.</p>
+          </div>
+        </div>
+        <button onclick="dismissStormAlarm()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold">
+          Acknowledge & Stand Down
+        </button>
+      `;
+      lucide.createIcons();
+    }
+
+    function dismissStormAlarm() {
+      document.getElementById('stormShelterBanner').classList.add('hidden');
+    }
+
+    function resetArraySubstrate() {
+      // Re-initialize DNA strands & flush buffer
+      initDNAStrands();
+      currentConductance = nominalConductance;
+      totalDSBs = 0;
+      stormShelterActive = false;
+
+      document.getElementById('metricDSBVal').textContent = '0 breaks';
+      document.getElementById('hudConductance').textContent = `${nominalConductance.toFixed(2)} nS`;
+      document.getElementById('metricConductanceVal').textContent = `${nominalConductance.toFixed(2)} nS`;
+      document.getElementById('hudLastHitType').textContent = "Array Freshly Re-Hybridized";
+
+      evaluateRadiationHazardState();
+      dismissStormAlarm();
+    }
+
+    // =========================================================================
+    // SLIDERS & USER CONTROLS
+    // =========================================================================
+    document.getElementById('sliderProtons').addEventListener('input', (e) => {
+      protonFlux = parseInt(e.target.value);
+      document.getElementById('valProtonSlider').textContent = `${protonFlux} p/cm²·s`;
+      document.getElementById('hudProtonRate').textContent = `${Math.round(protonFlux * 1.2)} hits/sec`;
+    });
+
+    document.getElementById('sliderGCR').addEventListener('input', (e) => {
+      gcrIronFlux = parseFloat(e.target.value);
+      document.getElementById('valGCRSlider').textContent = `${gcrIronFlux.toFixed(1)} ions/min`;
+      document.getElementById('hudGCRRate').textContent = `${(gcrIronFlux * 0.35).toFixed(2)} hits/min`;
+    });
+
+    // =========================================================================
+    // TELEMETRY TIMED LOOP (100 ms updates)
+    // =========================================================================
+    let tickCount = 0;
+    setInterval(() => {
+      tickCount++;
+
+      // Background proton noise injection based on slider
+      if (Math.random() < (protonFlux / 500)) {
+        if (Math.random() < 0.25) {
+          // Slight background fluctuation
+          const slight = (Math.random() - 0.49) * 0.02;
+          currentConductance = Math.min(nominalConductance, Math.max(0.2, currentConductance + slight));
+        }
+      }
+
+      // Background GCR event probability based on slider
+      if (Math.random() < (gcrIronFlux / 120)) {
+        injectGCRHeavyIon();
+      }
+
+      // Update Time-Series Charts every 5 ticks (~500ms)
+      if (tickCount % 5 === 0) {
+        if (timeConductanceChart) {
+          const cData = timeConductanceChart.data.datasets[0].data;
+          cData.shift();
+          cData.push(Number(currentConductance.toFixed(2)));
+          timeConductanceChart.update('none');
+        }
+
+        if (timeDSBChart) {
+          const dData = timeDSBChart.data.datasets[0].data;
+          dData.shift();
+          dData.push(totalDSBs);
+          timeDSBChart.update('none');
+        }
+      }
+
+      renderSimulation();
+    }, 40);
+
+    // =========================================================================
+    // WINDOW ONLOAD INITIALIZATION
+    // =========================================================================
+    window.onload = function () {
+      initDNAStrands();
+      resizeCanvas();
+      initCharts();
+      lucide.createIcons();
+
+      // Ensure formulas are processed
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+    };
+  </script>
+</body>
+</html>
